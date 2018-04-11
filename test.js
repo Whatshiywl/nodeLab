@@ -58,6 +58,18 @@ var helper = {
         console.log('wait');
         if(cb && typeof cb == 'function') cb();
     },
+
+    waitColorSignal: (x, y, r, g, b, cb) => {
+        console.log(`wait r=${r} g=${g} b=${b} at x=${x} y=${y}`);
+        let found = false;
+        while (!found) {
+            let image = robot.Image(1, 1);
+            let success = screen.grabScreen(image, x, y, 1, 1);
+            let color = image.getPixel(0, 0);
+            if(color.r == r && color.g == g && color.b == b) found = true;
+        }
+        if(cb && typeof cb == 'function') cb();
+    },
 };
 
 var trigger = moment().add(10, 's');
@@ -74,7 +86,7 @@ function testSchedulingAvailable(cb) {
             var $ = cheerio.load(chunk);
             var rows = $('.table tbody').children().length;
             // console.log(rows, 'rows');
-            if(rows > 100 || moment().isAfter(trigger)) {
+            if(rows > 4) {
                 console.log('Scheduling available!');
                 if(cb && typeof cb == 'function') cb();
             } else {
@@ -109,7 +121,7 @@ function getTimePositions(h, m, xBase) {
 }
 
 function getXs(n) {
-    if(n == 1) return [2360];
+    if(n == 1) return [3140];//[2360];
     if(n == 2) return [2000, 3075];
 }
 
@@ -123,10 +135,9 @@ function schedule(cpfs, hours, mins) {
     
     for(let i=0; i<cpfs.length; i++) {
         // Chrome
-        commands.push({f: 'click', args: [xBases[i]-60, 500], timeout: 1});
+        commands.push({f: 'click', args: [xBases[i]-60, 500], timeout: 1000});
 
         // Generate
-        let mousePos = mouseController.getPos();
         let image = robot.Image(1, 1000);
         let success = screen.grabScreen(image, xBases[i], 0, 1, 1000);
         let y = 0;
@@ -140,7 +151,7 @@ function schedule(cpfs, hours, mins) {
         commands.push({f: 'click', args: [xBases[i], y], timeout: 500});
     }
 
-    commands.push({f: 'wait', timeout: 100});
+    commands.push({f: 'waitColorSignal', args: [xBases[xBases.length-1], 430, 255, 224, 178], timeout: 500});
 
     for(let i=0; i<cpfs.length; i++) {
         // Chrome
@@ -170,25 +181,6 @@ function schedule(cpfs, hours, mins) {
 
     helper.exe(commands);
 
-    // helper.exe([
-    //     // Chrome
-    //     {f: 'click', args: [xBase-60, 500], timeout: 500},
-
-    //     // Captcha
-    //     {f: 'click', args: [xBase, 700], timeout: 2000},
-
-    //     // CPF
-    //     {f: 'click', args: [xBase, 500], timeout: 100},
-    //     {f: 'paste', args: [cpf.toString()], timeout: 100},
-
-    //     // Horario
-    //     {f: 'click', args: [xBase, 560], timeout: 100},
-    //     {f: 'click', args: timePos.hour, timeout: 100},
-    //     {f: 'click', args: timePos.min, timeout: 100},
-
-    //     // Send
-    //     // {f: 'click', args: [2500, 800], timeout: 100},
-    // ]);
 }
 
 // let mousePos = mouseController.getPos();
@@ -203,5 +195,5 @@ function schedule(cpfs, hours, mins) {
 // }
 
 testSchedulingAvailable(() => {
-    schedule([14584367728, 14862997767], 20, 00);
+    schedule([14862997767], 11, 20);
 });
