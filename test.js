@@ -125,30 +125,82 @@ function getXs(n) {
     if(n == 2) return [2000, 3075];
 }
 
+function getXs2(yBase) {
+    let image = robot.Image(2*1920, 40);
+    let success = screen.grabScreen(image, 0, yBase, 2*1920, 40);
+
+    const isNotButton = function(img, x) {
+        for(let j=0; j<img.getHeight(); j++) {
+            let color = image.getPixel(x, j);
+            if(color.r == 33 && color.g == 150 && color.b == 243) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    let xBases = [];
+
+    let onButton = false;
+    for(let i=0; i<image.getWidth(); i++) {
+        if(!isNOTButton(img, i)) {
+            if(!onButton) {
+                xBases.push(i+60);
+            }
+            onButton = true;
+        } 
+        else onButton = false;
+    }
+
+    return xBases;
+}
+
+function getBasePos() {
+    let image = robot.Image(2*1920, 1080);
+    let success = screen.grabScreen(image, 0, 0, 2*1920, 1080);
+    let x, y;
+    out: for(let i=0; i<image.getWidth(); i+=1) {
+        for(let j=0; j<image.getHeight(); j+=1) {
+            let color = image.getPixel(i, j);
+            if(color.r == 33 && color.g == 150 && color.b == 243) {
+                x = i;
+                y = j;
+                break out;
+            }
+        }
+    }
+    
+    return {x: x, y: y};
+}
+
 function schedule(cpfs, hours, mins) {
     if(!Array.isArray(cpfs)) cpfs = [cpfs];
-    let xBases = getXs(cpfs.length);
+    let base = getBasePos();
 
+    // let xBases = getXs(cpfs.length);
+    let xBases = getXs2(base.y);
+
+    let genY = 0;
+    let image = robot.Image(1, 1000);
+    let success = screen.grabScreen(image, xBases[i], 0, 1, 1000);
+    for(let j=0; j<image.getHeight(); j+=10) {
+        let color = image.getPixel(0, j);
+        if(color.r == 33 && color.g == 150 && color.b == 243) {
+            genY = j;
+            break;
+        }
+    }
+
+    console.log('scheduling', cpfs, `${hours}:${min}`);
+    
     let commands = [];
-
-    console.log('scheduling', cpfs, hours, mins);
     
     for(let i=0; i<cpfs.length; i++) {
         // Chrome
         commands.push({f: 'click', args: [xBases[i]-60, 500], timeout: 1000});
 
         // Generate
-        let image = robot.Image(1, 1000);
-        let success = screen.grabScreen(image, xBases[i], 0, 1, 1000);
-        let y = 0;
-        for(let j=0; j<image.getHeight(); j+=10) {
-            let color = image.getPixel(0, j);
-            if(color.r == 33 && color.g == 150 && color.b == 243) {
-                y = j;
-                break;
-            }
-        }
-        commands.push({f: 'click', args: [xBases[i], y], timeout: 500});
+        commands.push({f: 'click', args: [xBases[i], genY], timeout: 500});
     }
 
     commands.push({f: 'waitColorSignal', args: [xBases[xBases.length-1], 430, 255, 224, 178], timeout: 500});
@@ -158,7 +210,7 @@ function schedule(cpfs, hours, mins) {
         commands.push({f: 'click', args: [xBases[i]-60, 500], timeout: 100});
 
         // Captcha
-        commands.push({f: 'click', args: [xBases[i], 700], timeout: 2000/cpfs.length});
+        // commands.push({f: 'click', args: [xBases[i], 700], timeout: 2000/cpfs.length});
     }
 
     for(let i=0; i<cpfs.length; i++) {
@@ -176,7 +228,7 @@ function schedule(cpfs, hours, mins) {
         commands.push({f: 'click', args: timePos.min, timeout: 1});
         
         // Send
-        commands.push({f: 'click', args: [xBases[i], 800], timeout: 500});
+        // commands.push({f: 'click', args: [xBases[i], 800], timeout: 500});
     }
 
     helper.exe(commands);
@@ -194,6 +246,6 @@ function schedule(cpfs, hours, mins) {
 //     console.error('error grabbing screen');
 // }
 
-testSchedulingAvailable(() => {
+// testSchedulingAvailable(() => {
     schedule([14862997767], 11, 20);
-});
+// });
